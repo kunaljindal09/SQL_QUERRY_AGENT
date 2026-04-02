@@ -1,16 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useContext } from 'react'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import { useState, useEffect } from 'react'
+import { AuthProvider, AuthContext } from './context/AuthContext'
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+function AppRoutes() {
+  const { isAuthenticated, loading } = useContext(AuthContext)
 
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    setIsAuthenticated(!!token)
-  }, [])
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
 
   return (
     <Router>
@@ -38,6 +38,14 @@ function App() {
         </Routes>
       </div>
     </Router>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   )
 }
 

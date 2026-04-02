@@ -43,7 +43,7 @@ async def get_target_db_session(connection_string: str = None) -> AsyncSession:
         
     engine = create_async_engine(
         target_url,
-        echo=True,
+        echo=False,
         pool_pre_ping=True,
         pool_recycle=3600
     )

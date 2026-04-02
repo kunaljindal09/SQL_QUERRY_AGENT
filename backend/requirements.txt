@@ -1,28 +1,33 @@
 # FastAPI and server
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
+fastapi==0.135.2
+uvicorn[standard]==0.41.0
+starlette==1.0.0
 
 # Database
-sqlalchemy[asyncio]==2.0.25
-aiomysql==0.2.0
-pymysql==1.1.0
-alembic==1.13.1
+sqlalchemy[asyncio]==2.0.48
+aiomysql==0.3.2
+PyMySQL==1.1.2
+alembic==1.18.4
+greenlet==3.3.2
 
 # Authentication
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
+bcrypt==4.1.2
+python-multipart==0.0.22
+cryptography==46.0.5
 
 # HTTP Client for Ollama
-httpx==0.26.0
+httpx==0.28.1
 
 # Settings
 pydantic-settings==2.1.0
-python-dotenv==1.0.0
+pydantic==2.9.2
+python-dotenv==1.2.1
 
 # Validation
-pydantic[email]==2.5.3
-email-validator==2.1.0
 
-# CORS
-fastapi-cors==0.0.1
+email-validator==2.3.0
+
+# Async support
+anyio==4.12.1

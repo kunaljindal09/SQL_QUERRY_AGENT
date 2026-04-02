@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authAPI } from '../services/api'
+import { AuthContext } from '../context/AuthContext'
 
 function Login() {
   const navigate = useNavigate()
+  const { login } = useContext(AuthContext)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,7 +18,7 @@ function Login() {
 
     try {
       const response = await authAPI.login({ email, password })
-      localStorage.setItem('token', response.data.access_token)
+      login(response.data.access_token)
       navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed')
