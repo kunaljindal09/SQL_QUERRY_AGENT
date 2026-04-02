@@ -6,6 +6,7 @@ import {AuthContext} from '../context/AuthContext'
 import 'highlight.js/styles/github.css'
 import Schema from './Schema'
 import { Navigate } from 'react-router-dom'
+import Table from './Table'
 function Dashboard() {
   const {isAuthenticated} = useContext(AuthContext)
   const [question, setQuestion] = useState('')
@@ -224,51 +225,16 @@ function Dashboard() {
                 {/* Query Explanation */}
                 <div className="bg-white p-6 rounded-lg shadow">
                   <h3 className="text-lg font-semibold mb-4 text-gray-800">Explanation</h3>
-                  <pre className="bg-gray-50 p-4 rounded overflow-x-auto">
+                  
                     <code 
                       className="sql text-sm"
                       dangerouslySetInnerHTML={{
                         __html: response.explanation 
                       }}
                     />
-                  </pre>
+                 
                 </div>
-                {/* Results Table */}
-                {response.result}
-                {response.result && response.result.length > 0 && (
-                  <div className="bg-white p-6 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-800">
-                      Results ({response.result.length} rows)
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            {response.columns?.map((col) => (
-                              <th
-                                key={col}
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                              >
-                                {col}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {response.result.map((row, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              {response.columns?.map((col) => (
-                                <td key={col} className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                  {String(row[col] ?? '')}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                <Table response={response} />
 
                 {/* Error */}
                 {response.error && (

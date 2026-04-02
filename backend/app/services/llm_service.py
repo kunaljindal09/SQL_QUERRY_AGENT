@@ -91,7 +91,7 @@ class LLMService:
             model="gemini-2.5-flash",
             contents=prompt,
             config=GenerateContentConfig(
-                temperature=0.1,
+                temperature=0,
                 top_p=0.9
             )
         )
@@ -134,7 +134,8 @@ class LLMService:
     # SHARED: BUILD PROMPT
     # ------------------------------------------------
     def _build_prompt(self, question: str, schema_text: str) -> str:
-        return f"""You are an expert SQL query generator. Based on the database schema and user question below, generate a valid SQL query.
+        return f"""
+You are an expert SQL query generator. Based on the database schema and user question below, generate a valid SQL query.
 
 DATABASE SCHEMA:
 {schema_text}
@@ -146,7 +147,8 @@ RULES:
 2. Use proper JOINs where needed.
 3. The query must be efficient and well-formatted.
 4. Explain WHY this query answers the question — mention tables, filters, and joins used.
-
+5. Do not include conversational behaviour or apologies. Just provide the SQL and explanation.
+6. If names of the columns are same then give them alias name and the names should be meaningful.
 Respond ONLY with a valid JSON object. No markdown, no extra text:
 {{
     "sql": "<your SQL query here>",
