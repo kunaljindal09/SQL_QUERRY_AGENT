@@ -1,14 +1,27 @@
 export default function Table({ response }) {
-  console.log("Table component received response:", response);
+
 
   const rows = response?.result || [];
   const columns = response?.columns || [];
 
-  // Fix duplicate column names by auto-renaming
-  const fixedColumns = columns.map((col, idx) => {
-    const duplicateCount = columns.filter(c => c === col).length;
-    return duplicateCount > 1 ? `${col}_${idx + 1}` : col;
-  });
+  // Fix duplicate column names by adding numbered suffixes
+  const fixedColumns = (() => {
+    const colCount = {};
+    return columns.map((col) => {
+      if (!colCount[col]) colCount[col] = 1;
+      else colCount[col]++;
+
+      return colCount[col] === 1 ? col : `${col}_${colCount[col]}`;
+    });
+  })();
+
+  // Format cell values (null, boolean, objects, arrays)
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return "—";
+    if (typeof value === "boolean") return value ? "True" : "False";
+    if (typeof value === "object") return JSON.stringify(value, null, 2);
+    return String(value);
+  };
 
   return (
     <>
@@ -18,16 +31,16 @@ export default function Table({ response }) {
             Results ({rows.length} rows)
           </h3>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-md border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
 
               {/* Header */}
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-100">
                 <tr>
                   {fixedColumns.map((col) => (
                     <th
                       key={col}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                     >
                       {col}
                     </th>
@@ -43,14 +56,13 @@ export default function Table({ response }) {
                     className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                   >
                     {fixedColumns.map((col, colIdx) => {
-                      // Extract original column name without index
-                      const rawCol = columns[colIdx];
+                      const originalCol = columns[colIdx]; // actual DB column name
                       return (
                         <td
                           key={colIdx}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+                          className="px-6 py-3 whitespace-nowrap text-sm text-gray-800"
                         >
-                          {String(row[rawCol] ?? "")}
+                          {formatValue(row[originalCol])}
                         </td>
                       );
                     })}
