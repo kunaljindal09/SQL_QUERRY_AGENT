@@ -4,7 +4,9 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import { ToastContainer } from "react-toastify";
+import ERDiagram from './pages/ERDiagram'
 import { AuthProvider, AuthContext } from './context/AuthContext'
+import { SchemaProvider } from './context/SchemaContext'
 
 function AppRoutes() {
   const { isAuthenticated, loading } = useContext(AuthContext)
@@ -17,6 +19,12 @@ function AppRoutes() {
     <Router>
       <div className="min-h-screen bg-gray-50">
         <Routes>
+          <Route 
+            path="/er-diagram" 
+            element={
+              isAuthenticated ? <ERDiagram /> : <Navigate to="/login" />
+            } 
+          />
           <Route 
             path="/login" 
             element={
@@ -45,9 +53,11 @@ function AppRoutes() {
 
 function App() {
   return (
+    <SchemaProvider>
     <AuthProvider>
       <AppRoutes />
     </AuthProvider>
+    </SchemaProvider>
   )
 }
 
