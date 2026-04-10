@@ -226,34 +226,64 @@ const Icon = {
 };
 
 /* ─── SQL block ──────────────────────────────────────────────────────────── */
-function SqlBlock({ sql }) {
+function SqlBlock({ sql, isDark = false }) {
   const [copied, setCopied] = useState(false);
+
   const highlighted = sql
     ? hljs.highlightAuto(sql).value
-    : '<span style="color:#4b5563;font-style:italic">No SQL generated yet</span>';
+    : '<span class="italic opacity-60">No SQL generated yet</span>';
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(sql);
+    navigator.clipboard?.writeText(sql || "");
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
 
+  // ───────────────────────────────────────────────────────────
+  // THEME TOKENS
+  // ───────────────────────────────────────────────────────────
+  const theme = isDark
+    ? {
+        wrapper: "bg-[#070c18] border border-slate-800",
+        topBar: "bg-[#060b14] border-slate-800",
+        label: "text-slate-500",
+        button:
+          "border border-slate-700 text-slate-500 hover:text-slate-200 hover:border-slate-600",
+        code: "text-slate-300",
+      }
+    : {
+        wrapper: "bg-white border border-slate-300",
+        topBar: "bg-slate-50 border-slate-200",
+        label: "text-slate-600",
+        button:
+          "border border-slate-300 text-slate-600 hover:text-slate-800 hover:border-slate-400",
+        code: "text-slate-800",
+      };
+
   return (
-    <div className="rounded-xl border border-slate-800 overflow-hidden bg-[#070c18]">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800 bg-[#060b14]">
-        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest font-mono">
+    <div className={`rounded-xl overflow-hidden ${theme.wrapper}`}>
+      {/* Header */}
+      <div
+        className={`flex items-center justify-between px-4 py-2.5 border-b ${theme.topBar}`}
+      >
+        <span
+          className={`text-[10px] font-semibold uppercase tracking-widest font-mono ${theme.label}`}
+        >
           SQL
         </span>
+
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-700 text-slate-500 hover:text-slate-200 hover:border-slate-600 transition-all text-[10px] font-medium"
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${theme.button}`}
         >
           <Icon.Copy />
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>
+
+      {/* Code */}
       <pre
-        className="p-4 text-[12.5px] leading-relaxed font-mono overflow-x-auto text-slate-300 m-0"
+        className={`p-4 text-[12.5px] leading-relaxed font-mono overflow-x-auto m-0 ${theme.code}`}
         dangerouslySetInnerHTML={{ __html: highlighted }}
       />
     </div>
@@ -604,19 +634,19 @@ function Dashboard() {
 
   // ── Colour tokens based on theme
   const bg = {
-    app: isDark ? "#07090f" : "#f0f4ff",
+    app: isDark ? "#081115" : "#f0f4ff",
     sidebar: isDark ? "#040710" : "#ffffff",
     header: isDark ? "#040710" : "#ffffff",
     card: isDark ? "#070c18" : "#ffffff",
     input: isDark ? "#0a1020" : "#f8faff",
-    schema: isDark ? "#04070e" : "#f0f6ff",
+    schema: isDark ? "#080e1c" : "#f0f6ff",
   };
-  const border = isDark ? "#0f1929" : "#e2e8f0";
+  const border = isDark ? "#142136" : "#e2e8f0";
   const borderCls = isDark ? "border-slate-900" : "border-slate-200";
   const txt = {
-    primary: isDark ? "#e2e8f0" : "#1e293b",
-    muted: isDark ? "#475569" : "#64748b",
-    faint: isDark ? "#1e293b" : "#94a3b8",
+    primary: isDark ? "#fcfcfc" : "#1e293b",
+    muted: isDark ? "#126eee" : "#64748b",
+    faint: isDark ? "#2656a5" : "#94a3b8",
   };
 
   return (
@@ -985,7 +1015,7 @@ function Dashboard() {
                   <p
                     style={{
                       fontSize: 12,
-                      color: isDark ? "#64748b" : "#475569",
+                      color: isDark ? "#036afa" : "#475569",
                       margin: 0,
                       lineHeight: 1.4,
                       flex: 1,
@@ -1436,7 +1466,7 @@ function Dashboard() {
                   className="fade-up"
                   style={{ display: "flex", flexDirection: "column", gap: 14 }}
                 >
-                  <SqlBlock sql={response.sql} />
+                  <SqlBlock sql={response.sql} isDark={isDark} />
 
                   {/* Tabs */}
                   <div>
@@ -1501,7 +1531,7 @@ function Dashboard() {
                           background: isDark ? "#070c18" : "#ffffff",
                           fontSize: 13,
                           lineHeight: 1.7,
-                          color: isDark ? "#94a3b8" : "#374151",
+                          color: isDark ? "#d7d8d8" : "#161a21",
                         }}
                       >
                         <div
@@ -1557,7 +1587,7 @@ function Dashboard() {
                             </div>
                           </div>
                         ) : (
-                          <Table response={response.result} />
+                          <Table response={response.result} isDark={isDark}/>
                         )}
                       </div>
                     )}
