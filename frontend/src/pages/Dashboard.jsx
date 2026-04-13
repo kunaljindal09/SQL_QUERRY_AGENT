@@ -646,7 +646,7 @@ function Dashboard() {
   const txt = {
     primary: isDark ? "#fcfcfc" : "#1e293b",
     muted: isDark ? "#126eee" : "#64748b",
-    faint: isDark ? "#2656a5" : "#94a3b8",
+    faint: isDark ? "#c9ccd09e" : "#94a3b8",
   };
 
   return (
