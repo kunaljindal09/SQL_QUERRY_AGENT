@@ -12,6 +12,7 @@ from app.core.database import Base
 from app.core.config import settings
 from app.models.user import User
 from app.models.query_history import QueryHistory
+from app.models.schema_statistics import SchemaStatistics
 
 # this is the Alembic Config object
 config = context.config

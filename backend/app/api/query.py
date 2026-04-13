@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 from decimal import Decimal
@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.query_history import QueryHistory
 from app.schemas.user import QueryRequest, QueryResponse, SchemaRequest
 from app.services.schema_service import schema_service
+from app.services.statistics_service import statistics_service
 from app.services.llm_service import llm_service
 from app.services.query_service import query_service
 
@@ -145,3 +146,56 @@ async def ask_question(
     finally:
         await db_session.close()
         await engine.dispose()
+
+
+@router.post("/statistics", response_model=dict)
+async def get_schema_statistics(
+    request: SchemaRequest,
+    current_user: User = Depends(get_current_user),
+    app_db: AsyncSession = Depends(get_app_db),
+    force_refresh: bool = Query(False, description="Force refresh cache")
+):
+    """
+    Get cached schema statistics for chart visualization.
+    Statistics are cached with a 24-hour TTL.
+    """
+    try:
+        db_session, engine = await get_target_db_session(request.connection_string)
+        db_name = engine.url.database or "sql_agent_db"
+        
+        # Get schema first
+        schema = await schema_service.get_database_schema(db_session, db_name)
+        
+        # Get or compute statistics
+        statistics = await statistics_service.get_or_compute_statistics(
+            app_db=app_db,
+            target_db=db_session,
+            connection_string=request.connection_string,
+            database_name=db_name,
+            schema=schema,
+            ttl_hours=24,
+            force_refresh=force_refresh
+        )
+        
+        await db_session.close()
+        await engine.dispose()
+        
+        return statistics
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to get statistics: {str(e)}")
+
+
+@router.post("/statistics/invalidate", response_model=dict)
+async def invalidate_statistics_cache(
+    request: SchemaRequest,
+    current_user: User = Depends(get_current_user),
+    app_db: AsyncSession = Depends(get_app_db)
+):
+    """Manually invalidate the statistics cache for a connection"""
+    try:
+        success = await statistics_service.invalidate_cache(
+            app_db, request.connection_string
+        )
+        return {"success": success, "message": "Cache invalidated" if success else "Cache entry not found"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to invalidate cache: {str(e)}")

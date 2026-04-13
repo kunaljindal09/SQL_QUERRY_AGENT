@@ -4,6 +4,7 @@ import { queryAPI, historyAPI } from "../services/api";
 import hljs from "highlight.js";
 import Table from "./Table";
 import ERDiagram from "./ERDiagram";
+import SchemaStatisticsCharts from "./SchemaStatisticsCharts";
 import { Link } from "react-router-dom";
 import { useSchema } from "../context/SchemaContext";
 /* ─── Icons ──────────────────────────────────────────────────────────────── */
@@ -1460,6 +1461,7 @@ function Dashboard() {
                             ? `Results (${response.result.length})`
                             : "Results",
                         },
+                        { key: "statistics", label: "Analysis Stats" },
                       ].map((tab) => (
                         <button
                           key={tab.key}
@@ -1559,6 +1561,15 @@ function Dashboard() {
                         ) : (
                           <Table response={response.result} />
                         )}
+                      </div>
+                    )}
+
+                    {activeTab === "statistics" && (
+                      <div className="fade-up">
+                        <SchemaStatisticsCharts 
+                          connectionString={connectionMode === "custom" ? connectionString : null}
+                          key={`stats-${connectionMode}-${connectionString}`}
+                        />
                       </div>
                     )}
                   </div>

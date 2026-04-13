@@ -29,7 +29,11 @@ export const authAPI = {
 // Query API
 export const queryAPI = {
   getSchema: (connection_string = null) => api.post('/api/query/schema', { connection_string }),
-  askQuestion: (question, connection_string = null) => api.post('/api/query/ask', { question, connection_string })
+  askQuestion: (question, connection_string = null) => api.post('/api/query/ask', { question, connection_string }),
+  getStatistics: (connection_string = null, forceRefresh = false) => 
+    api.post('/api/query/statistics', { connection_string }, { params: { force_refresh: forceRefresh } }),
+  invalidateStatisticsCache: (connection_string = null) => 
+    api.post('/api/query/statistics/invalidate', { connection_string })
 }
 
 // History API

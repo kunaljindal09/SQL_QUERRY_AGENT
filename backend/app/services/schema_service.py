@@ -104,5 +104,72 @@ class SchemaService:
             "foreign_keys": foreign_keys
         }
 
+    @staticmethod
+    async def compute_schema_statistics(
+        db: AsyncSession, 
+        database_name: str,
+        schema: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Compute schema statistics for chart visualization"""
+        
+        # 1. Get table sizes (row counts)
+        table_sizes = []
+        for table in schema["tables"]:
+            count_query = text(f"SELECT COUNT(*) FROM `{table['table_name']}`")
+            result = await db.execute(count_query)
+            row_count = result.scalar() or 0
+            table_sizes.append({
+                "table_name": table["table_name"],
+                "row_count": row_count
+            })
+        
+        # 2. Analyze column types distribution
+        column_types = {}
+        for table in schema["tables"]:
+            for column in table["columns"]:
+                col_type = column["data_type"].upper()
+                column_types[col_type] = column_types.get(col_type, 0) + 1
+        
+        # 3. Get nullable statistics
+        nullable_stats = []
+        for table in schema["tables"]:
+            nullable_count = sum(1 for col in table["columns"] if col["is_nullable"] == "YES")
+            not_null_count = len(table["columns"]) - nullable_count
+            nullable_stats.append({
+                "table_name": table["table_name"],
+                "nullable_count": nullable_count,
+                "not_null_count": not_null_count
+            })
+        
+        # 4. Relationship statistics
+        relationship_stats = []
+        for table in schema["tables"]:
+            for fk in table["foreign_keys"]:
+                relationship_stats.append({
+                    "from_table": table["table_name"],
+                    "from_column": fk["column"],
+                    "to_table": fk["references_table"],
+                    "to_column": fk["references_column"],
+                    "type": "1:N"
+                })
+        
+        # 5. Primary keys info
+        primary_keys_info = []
+        for table in schema["tables"]:
+            pk = table.get("primary_key")
+            if pk:
+                primary_keys_info.append({
+                    "table_name": table["table_name"],
+                    "pk_column": pk
+                })
+        
+        return {
+            "table_sizes": table_sizes,
+            "column_types": column_types,
+            "nullable_stats": nullable_stats,
+            "relationship_stats": relationship_stats,
+            "primary_keys_info": primary_keys_info
+        }
+
 
 schema_service = SchemaService()
