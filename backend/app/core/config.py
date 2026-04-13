@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     LLAMA_VERIFY_SSL: bool =os.getenv("LLAMA_VERIFY_SSL")
     
     # germini Settings (alternative)
-    GOOGLE_API_KEY: str=str(os.getenv("GOOGLE_API_KEY"))
+    GEMINI_API_KEY: str=str(os.getenv("GEMINI_API_KEY"))
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     

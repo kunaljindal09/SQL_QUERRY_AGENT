@@ -5,6 +5,7 @@ import hljs from "highlight.js";
 import Table from "./Table";
 import ERDiagram from "./ERDiagram";
 import SchemaStatisticsCharts from "./SchemaStatisticsCharts";
+import Analysis from "./Analysis";
 import { Link } from "react-router-dom";
 import { useSchema } from "../context/SchemaContext";
 /* ─── Icons ──────────────────────────────────────────────────────────────── */
@@ -495,10 +496,12 @@ function SchemaTree({ schema, loading, isDark }) {
 function Dashboard() {
   const [question, setQuestion] = useState("");
   const { schema, setSchema, setIsDark } = useSchema();
+  
   const emptyResponse = () => ({
     result: [],
     sql: "",
     explanation: "No explanation available",
+    analysis:null,
     error: "",
   });
   const [response, setResponse] = useState(emptyResponse);
@@ -548,15 +551,17 @@ function Dashboard() {
     }
   };
 
+  
   const loadHistory = async () => {
     try {
       const r = await historyAPI.getHistory({ limit: 50 });
       setHistory(r.data);
+      console.log(history)
     } catch (err) {
       console.error("Failed to load history", err);
     }
   };
-
+  
   const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!question.trim()) return;
@@ -621,6 +626,7 @@ function Dashboard() {
       result: item.execution_result ? JSON.parse(item.execution_result) : [],
       error: item.error_message || "",
       explanation: item.explanation || "No explanation available",
+      analysis:item.analysis||{}
     });
     setActiveTab("explanation");
     inputRef.current?.focus();
@@ -924,31 +930,31 @@ function Dashboard() {
               }}
             >
               <Link
-  to="/er-diagram"
-  className="flex items-center gap-1"
-  style={{
-    fontSize: 12,
-    color: txt.muted,
-    marginBottom: 8,
-  }}
->
-  View full ER diagram
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    className="w-4 h-4"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M13.5 6H18m0 0v4.5m0-4.5L10.5 13.5M6 6h4.5M6 6v12m0 0h12"
-    />
-  </svg>
-</Link>
-              
+                to="/er-diagram"
+                className="flex items-center gap-1"
+                style={{
+                  fontSize: 12,
+                  color: txt.muted,
+                  marginBottom: 8,
+                }}
+              >
+                View full ER diagram
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 6H18m0 0v4.5m0-4.5L10.5 13.5M6 6h4.5M6 6v12m0 0h12"
+                  />
+                </svg>
+              </Link>
+
               {schemaViewMode === "er" ? (
                 <ERDiagram />
               ) : (
@@ -1492,6 +1498,7 @@ function Dashboard() {
                             : "Results",
                         },
                         { key: "statistics", label: "Analysis Stats" },
+                        { key: "Analysis", label: "Analysis" },
                       ].map((tab) => (
                         <button
                           key={tab.key}
@@ -1589,17 +1596,26 @@ function Dashboard() {
                             </div>
                           </div>
                         ) : (
-                          <Table response={response.result} isDark={isDark}/>
+                          <Table response={response.result} isDark={isDark} />
                         )}
                       </div>
                     )}
 
                     {activeTab === "statistics" && (
                       <div className="fade-up">
-                        <SchemaStatisticsCharts 
-                          connectionString={connectionMode === "custom" ? connectionString : null}
+                        <SchemaStatisticsCharts
+                          connectionString={
+                            connectionMode === "custom"
+                              ? connectionString
+                              : null
+                          }
                           key={`stats-${connectionMode}-${connectionString}`}
                         />
+                      </div>
+                    )}
+                    {activeTab === "Analysis" && (
+                      <div className="fade-up">
+                        <Analysis analysis={response.analysis}/>
                       </div>
                     )}
                   </div>
