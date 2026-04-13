@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import auth, query, history
-from app.core.database import init_db
+from app.core.database import app_engine, init_db
 
 app = FastAPI(
     title="SQL Query Builder Agent",
@@ -30,6 +31,11 @@ async def startup_event():
     await init_db()
 
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    await app_engine.dispose()
+
+
 @app.get("/")
 async def root():
     return {
@@ -37,6 +43,14 @@ async def root():
         "version": "1.0.0",
         "docs": "/docs"
     }
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "error": exc.detail},
+    )
 
 
 @app.get("/health")
