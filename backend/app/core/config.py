@@ -24,8 +24,10 @@ class Settings(BaseSettings):
     LLAMA_MODEL: str = os.getenv("LLAMA_MODEL", "deepseek-coder:6.7b")
     LLAMA_VERIFY_SSL: bool = os.getenv("LLAMA_VERIFY_SSL", "false").lower() in ("true", "1", "yes")
     
-    # Gemini Settings (alternative)
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    # germini Settings (alternative)
+    GEMINI_API_KEY: str=str(os.getenv("GEMINI_API_KEY"))
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-3.5-turbo"
     
     # Query Settings
     MAX_QUERY_ROWS: int = int(os.getenv("MAX_QUERY_ROWS", "100"))

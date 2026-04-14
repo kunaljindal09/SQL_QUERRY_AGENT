@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Any, Dict, Dict, Optional, List
 from datetime import datetime
 
 from app.core.config import settings
@@ -42,24 +42,28 @@ class TokenData(BaseModel):
 
 # Query History Schemas
 class QueryHistoryBase(BaseModel):
-    natural_question: str
+    natural_question: str = None
 
 
 class QueryHistoryCreate(QueryHistoryBase):
     generated_sql: str
     execution_result: Optional[str] = None
     error_message: Optional[str] = None
+    analysis: Optional[AnalysisResponse] = None
 
 
 class QueryHistoryResponse(QueryHistoryBase):
     id: int
     user_id: int
     generated_sql: str
-    execution_result: Optional[str]
-    error_message: Optional[str]
+    # Add = None to all optional fields
+    execution_result: Optional[str] = None 
+    error_message: Optional[str] = None
     is_bookmarked: bool
     created_at: Optional[datetime] = None
     explanation: Optional[str] = None
+    # Ensure this matches the AnalysisResponse structure
+    analysis: Optional[AnalysisResponse] = None 
 
     class Config:
         from_attributes = True
@@ -74,13 +78,21 @@ class QueryRequest(BaseModel):
 class SchemaRequest(BaseModel):
     connection_string: Optional[str] = None
 
+class AnalysisResponse(BaseModel):
+    summary: str
+    insights: List[str]
+    trends: List[str]
+    anomalies: List[str]
+    recommendations: Optional[List[str]] = []
+    metadata: Optional[Dict[str, Any]] = None
 
 class QueryResponse(BaseModel):
     sql: str
     explanation: str
-    result: Optional[List[dict]] = None
+    result: Optional[List[Dict[str, Any]]] = None
     error: Optional[str] = None
     columns: Optional[List[str]] = None
+    analysis:Optional[AnalysisResponse] = None
 
 
 # Schema Introspection
@@ -93,3 +105,6 @@ class ColumnInfo(BaseModel):
 
 class SchemaResponse(BaseModel):
     tables: List[dict]
+    
+
+    

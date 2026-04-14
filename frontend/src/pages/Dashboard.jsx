@@ -493,10 +493,12 @@ function SchemaTree({ schema, loading, isDark }) {
 function Dashboard() {
   const [question, setQuestion] = useState("");
   const { schema, setSchema, setIsDark } = useSchema();
+  
   const emptyResponse = () => ({
     result: [],
     sql: "",
     explanation: "No explanation available",
+    analysis:null,
     error: "",
   });
   const [response, setResponse] = useState(emptyResponse);
@@ -547,15 +549,17 @@ function Dashboard() {
     }
   };
 
+  
   const loadHistory = async () => {
     try {
       const r = await historyAPI.getHistory({ limit: 50 });
       setHistory(r.data);
+      console.log(history)
     } catch (err) {
       console.error("Failed to load history", err);
     }
   };
-
+  
   const handleSubmit = async (e) => {
     e?.preventDefault();
     if (!question.trim()) return;
@@ -621,6 +625,7 @@ function Dashboard() {
       result: item.execution_result ? JSON.parse(item.execution_result) : [],
       error: item.error_message || "",
       explanation: item.explanation || "No explanation available",
+      analysis:item.analysis||{}
     });
     setActiveTab("explanation");
     inputRef.current?.focus();
@@ -1522,6 +1527,7 @@ function Dashboard() {
                             : "Results",
                         },
                         { key: "statistics", label: "Analysis Stats" },
+                        { key: "Analysis", label: "Analysis" },
                       ].map((tab) => (
                         <button
                           key={tab.key}
@@ -1626,10 +1632,19 @@ function Dashboard() {
 
                     {activeTab === "statistics" && (
                       <div className="fade-up">
-                        <SchemaStatisticsCharts 
-                          connectionString={connectionMode === "custom" ? connectionString : null}
+                        <SchemaStatisticsCharts
+                          connectionString={
+                            connectionMode === "custom"
+                              ? connectionString
+                              : null
+                          }
                           key={`stats-${connectionMode}-${connectionString}`}
                         />
+                      </div>
+                    )}
+                    {activeTab === "Analysis" && (
+                      <div className="fade-up">
+                        <Analysis analysis={response.analysis}/>
                       </div>
                     )}
                   </div>
