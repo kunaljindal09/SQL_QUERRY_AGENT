@@ -152,7 +152,7 @@ async def ask_question(
         # Step 6: Save to history
         result = json.dumps(result_rows, cls=CustomJSONEncoder)
         analysis_response = await llm_service.analyze_query_results(
-            request.question or "", result or []
+            request.question or "", result_rows  
         )
         analysis_obj = AnalysisResponse(
             summary=analysis_response.get("summary", ""),
