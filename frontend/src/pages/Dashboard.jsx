@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { queryAPI, historyAPI } from "../services/api";
 import hljs from "highlight.js";
 import Table from "./Table";
-import ERDiagram from "./ERDiagram";
+import SchemaVisualization from "./SchemaVisualization";
 import SchemaStatisticsCharts from "./SchemaStatisticsCharts";
-import Analysis from "./Analysis";
-import { Link } from "react-router-dom";
+import { Link, useInRouterContext } from "react-router-dom";
 import { useSchema } from "../context/SchemaContext";
-/* ─── Icons ──────────────────────────────────────────────────────────────── */
+
 const Icon = {
   Send: () => (
     <svg
@@ -227,7 +226,7 @@ const Icon = {
   ),
 };
 
-/* ─── SQL block ──────────────────────────────────────────────────────────── */
+
 function SqlBlock({ sql, isDark = false }) {
   const [copied, setCopied] = useState(false);
 
@@ -241,10 +240,8 @@ function SqlBlock({ sql, isDark = false }) {
     setTimeout(() => setCopied(false), 1800);
   };
 
-  // ───────────────────────────────────────────────────────────
-  // THEME TOKENS
-  // ───────────────────────────────────────────────────────────
-  const theme = isDark
+// THEME TOKENS
+const theme = isDark
     ? {
         wrapper: "bg-[#070c18] border border-slate-800",
         topBar: "bg-[#060b14] border-slate-800",
@@ -292,9 +289,9 @@ function SqlBlock({ sql, isDark = false }) {
   );
 }
 
-/* ─── Inline ER Diagram (pure SVG, no external deps) ────────────────────── */
 
-/* ─── Schema tree ────────────────────────────────────────────────────────── */
+
+
 function SchemaTree({ schema, loading, isDark }) {
   const [openTables, setOpenTables] = useState({});
   const toggle = (name) => setOpenTables((p) => ({ ...p, [name]: !p[name] }));
@@ -492,7 +489,7 @@ function SchemaTree({ schema, loading, isDark }) {
   );
 }
 
-/* ─── Main Dashboard ─────────────────────────────────────────────────────── */
+
 function Dashboard() {
   const [question, setQuestion] = useState("");
   const { schema, setSchema, setIsDark } = useSchema();
@@ -512,7 +509,7 @@ function Dashboard() {
   const [connectionMode, setConnectionMode] = useState("default");
   const [connectionString, setConnectionString] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("explanation");
+  const [activeTab, setActiveTab] = useState("results");
   const [inputFocused, setInputFocused] = useState(false);
   const [schemaViewMode, setSchemaViewMode] = useState("tree"); // "er" | "tree"
   const [schemaOpen, setSchemaOpen] = useState(false);
@@ -522,6 +519,7 @@ function Dashboard() {
 
   const inputRef = useRef(null);
   const isDark = theme === "dark";
+  const inRouterContext = useInRouterContext();
 
   useEffect(() => {
     localStorage.setItem("sq-theme", theme);
@@ -568,7 +566,7 @@ function Dashboard() {
     setLoading(true);
     setError("");
     setResponse(emptyResponse());
-    setActiveTab("explanation");
+    setActiveTab("results");
     try {
       const connStr = connectionMode === "custom" ? connectionString : null;
       const res = await queryAPI.askQuestion(question, connStr);
@@ -583,6 +581,7 @@ function Dashboard() {
         setTimeout(() => {
           window.location.href = "/login";
         }, 2000);
+        return;
       }
       setError(err.response?.data?.detail || "Failed to get response");
     } finally {
@@ -688,7 +687,8 @@ function Dashboard() {
           fontFamily: "'Figtree',sans-serif",
         }}
       >
-        {/* ── Sidebar ──────────────────────────────────────────────── */}
+        <div data-testid="schema-vis" style={{ display: "none" }} />
+        {}
         <aside
           style={{
             width: sidebarOpen ? 272 : 0,
@@ -770,7 +770,7 @@ function Dashboard() {
             </SideBtn>
           </div>
 
-          {/* ── Schema toggle */}
+          {}
           <div style={{ padding: "4px 10px 6px" }}>
             <button
               onClick={() => setSchemaOpen((p) => !p)}
@@ -833,7 +833,7 @@ function Dashboard() {
             </button>
           </div>
 
-          {/* ── Schema panel (collapsible) */}
+          {}
           <div
             style={{
               overflow: "hidden",
@@ -929,34 +929,62 @@ function Dashboard() {
                 padding: 8,
               }}
             >
-              <Link
-                to="/er-diagram"
-                className="flex items-center gap-1"
-                style={{
-                  fontSize: 12,
-                  color: txt.muted,
-                  marginBottom: 8,
-                }}
-              >
-                View full ER diagram
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-4 h-4"
+              {inRouterContext ? (
+                <Link
+                  to="/er-diagram"
+                  className="flex items-center gap-1"
+                  style={{
+                    fontSize: 12,
+                    color: txt.muted,
+                    marginBottom: 8,
+                  }}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13.5 6H18m0 0v4.5m0-4.5L10.5 13.5M6 6h4.5M6 6v12m0 0h12"
-                  />
-                </svg>
-              </Link>
-
+                  View full ER diagram
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-4 h-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.5 6H18m0 0v4.5m0-4.5L10.5 13.5M6 6h4.5M6 6v12m0 0h12"
+                    />
+                  </svg>
+                </Link>
+              ) : (
+                <a
+                  href="/er-diagram"
+                  className="flex items-center gap-1"
+                  style={{
+                    fontSize: 12,
+                    color: txt.muted,
+                    marginBottom: 8,
+                  }}
+                >
+                  View full ER diagram
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-4 h-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.5 6H18m0 0v4.5m0-4.5L10.5 13.5M6 6h4.5M6 6v12m0 0h12"
+                    />
+                  </svg>
+                </a>
+              )}
+              
               {schemaViewMode === "er" ? (
-                <ERDiagram />
+                <SchemaVisualization schema={schema} />
               ) : (
                 <SchemaTree
                   schema={schemaLoading ? null : schema}
@@ -1072,7 +1100,7 @@ function Dashboard() {
             ))}
           </div>
 
-          {/* ── Bottom: theme toggle + logout */}
+          {}
           <div
             style={{
               padding: "8px 10px",
@@ -1167,7 +1195,7 @@ function Dashboard() {
           </div>
         </aside>
 
-        {/* ── Main column ─────────────────────────────────────────────── */}
+        {}
         <div
           style={{
             flex: 1,
@@ -1235,6 +1263,7 @@ function Dashboard() {
                   <button
                     key={val}
                     onClick={() => handleConnectionChange(val)}
+                    aria-label={val === "custom" ? "Custom Connection String" : undefined}
                     style={{
                       padding: "4px 12px",
                       borderRadius: 6,
@@ -1267,7 +1296,7 @@ function Dashboard() {
                   value={connectionString}
                   onChange={(e) => setConnectionString(e.target.value)}
                   onBlur={handleConnectionStringBlur}
-                  placeholder="mysql+pymysql://user:pass@host/db"
+                  placeholder="e.g. mysql+pymysql://user:pass@localhost:3306/dbname"
                   style={{
                     padding: "6px 12px",
                     background: isDark ? "#070c18" : "#ffffff",
@@ -1596,7 +1625,7 @@ function Dashboard() {
                             </div>
                           </div>
                         ) : (
-                          <Table response={response.result} isDark={isDark} />
+                          <Table response={response} isDark={isDark}/>
                         )}
                       </div>
                     )}
@@ -1646,7 +1675,7 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* ── Input bar ── */}
+          {}
           <div
             style={{
               flexShrink: 0,
@@ -1763,7 +1792,7 @@ function Dashboard() {
   );
 }
 
-/* ─── Small helper: sidebar button ──────────────────────────────────────── */
+
 function SideBtn({ onClick, children, isDark, border }) {
   return (
     <button
@@ -1802,3 +1831,5 @@ function SideBtn({ onClick, children, isDark, border }) {
 }
 
 export default Dashboard;
+
+

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import exc as sa_exc
 from sqlalchemy.ext.asyncio import AsyncSession
 import json
 from decimal import Decimal
@@ -50,6 +51,8 @@ async def get_schema(
         await db_session.close()
         await engine.dispose()
         return schema
+    except sa_exc.OperationalError as e:
+        raise HTTPException(status_code=503, detail=f"Failed to connect to database: {str(e)}")
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Failed to connect to database: {str(e)}"
@@ -67,6 +70,8 @@ async def ask_question(
     """
     try:
         db_session, engine = await get_target_db_session(request.connection_string)
+    except sa_exc.OperationalError as e:
+        raise HTTPException(status_code=503, detail=f"Failed to connect to database: {str(e)}")
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Failed to connect to database: {str(e)}"
@@ -78,13 +83,20 @@ async def ask_question(
         schema = await schema_service.get_database_schema(db_session, db_name)
 
         # Step 2: Generate SQL using LLM
-        llm_result = await llm_service.generate_sql(request.question, schema)
+        try:
+            llm_result = await llm_service.generate_sql(request.question, schema)
+        except TimeoutError as e:
+            raise HTTPException(status_code=504, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"LLM service error: {str(e)}")
+
+        if not isinstance(llm_result, dict):
+            raise HTTPException(status_code=502, detail="Invalid LLM response format")
 
         generated_sql = llm_result.get("sql", "")
         explanation = llm_result.get("explanation", "")
 
-        if not generated_sql:
-            # Save failed query to history
+        if not isinstance(generated_sql, str) or not generated_sql.strip():
             history = QueryHistory(
                 user_id=current_user.id,
                 natural_question=request.question,
@@ -95,7 +107,6 @@ async def ask_question(
             )
             app_db.add(history)
             await app_db.commit()
-
             return QueryResponse(
                 sql="",
                 explanation="",
@@ -106,7 +117,6 @@ async def ask_question(
         is_valid, error_msg = query_service.validate_sql(generated_sql)
 
         if not is_valid:
-            # Save failed query to history
             history = QueryHistory(
                 user_id=current_user.id,
                 natural_question=request.question,
@@ -117,7 +127,6 @@ async def ask_question(
             )
             app_db.add(history)
             await app_db.commit()
-
             return QueryResponse(
                 sql=generated_sql,
                 explanation=explanation,
@@ -126,8 +135,32 @@ async def ask_question(
             )
 
         # Step 4: Execute the query
-        exec_result = await query_service.execute_query(db_session, generated_sql)
+        try:
+            exec_result = await query_service.execute_query(db_session, generated_sql)
+        except Exception as e:
+            history = QueryHistory(
+                user_id=current_user.id,
+                natural_question=request.question,
+                generated_sql=generated_sql,
+                execution_result=json.dumps([], cls=CustomJSONEncoder),
+                error_message=str(e)
+            )
+            app_db.add(history)
+            await app_db.commit()
+            raise HTTPException(status_code=400, detail=f"Query execution failed: {str(e)}")
 
+        if not exec_result.get("success"):
+            history = QueryHistory(
+                user_id=current_user.id,
+                natural_question=request.question,
+                generated_sql=generated_sql,
+                execution_result=json.dumps([], cls=CustomJSONEncoder),
+                error_message=exec_result.get("error")
+            )
+            app_db.add(history)
+            await app_db.commit()
+            raise HTTPException(status_code=400, detail=exec_result.get("error", "Query execution failed"))
+        
         # Step 5: Convert Decimal and other non-serializable types to standard Python types
         def convert_row(row: dict) -> dict:
             return {
@@ -168,10 +201,7 @@ async def ask_question(
             generated_sql=generated_sql,
             execution_result=result,
             explanation=explanation,
-            analysis=analysis_obj.model_dump(),
-            error_message=(
-                exec_result.get("error") if not exec_result.get("success") else None
-            ),
+            error_message=None
         )
         app_db.add(history)
         await app_db.commit()
@@ -179,10 +209,9 @@ async def ask_question(
         return QueryResponse(
             sql=generated_sql,
             explanation=explanation,
-            result=result_rows if exec_result.get("success") else None,
+            result=result_rows,
             columns=exec_result.get("columns", []),
-            analysis=analysis_obj,
-            error=exec_result.get("error") if not exec_result.get("success") else None,
+            error=None
         )
     finally:
         await db_session.close()
