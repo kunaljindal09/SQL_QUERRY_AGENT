@@ -204,7 +204,7 @@ class TestAskQuestion:
         mock_llm_svc.generate_sql = AsyncMock(return_value={
             "sql": "",
             "explanation": "",
-            "error": "Both primary and fallback LLMs failed.",
+            "error": "LLM service unavailable. Primary: Ollama failed. Fallback: Google failed.",
         })
 
         # Act
