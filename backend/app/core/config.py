@@ -15,26 +15,28 @@ class Settings(BaseSettings):
     
     # JWT Settings
     SECRET_KEY: str = os.getenv("SECRET_KEY")
-    ALGORITHM: str = os.getenv("ALGORITHM")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
     
     # LLM Settings (Ollama)
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER")  
-    LLAMA_BASE_URL: str = os.getenv("LLAMA_BASE_URL")
-    LLAMA_MODEL: str = os.getenv("LLAMA_MODEL")
-    LLAMA_VERIFY_SSL: bool =os.getenv("LLAMA_VERIFY_SSL")
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "llama")
+    LLAMA_BASE_URL: str = os.getenv("LLAMA_BASE_URL", "http://localhost:11434/api")
+    LLAMA_MODEL: str = os.getenv("LLAMA_MODEL", "deepseek-coder:6.7b")
+    LLAMA_VERIFY_SSL: bool = os.getenv("LLAMA_VERIFY_SSL", "false").lower() in ("true", "1", "yes")
     
-    # germini Settings (alternative)
-    GOOGLE_API_KEY: str=str(os.getenv("GOOGLE_API_KEY"))
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-3.5-turbo"
+    # Gemini Settings (alternative)
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     
     # Query Settings
-    MAX_QUERY_ROWS: int = os.getenv("MAX_QUERY_ROWS")
-    QUERY_TIMEOUT_SECONDS: int = os.getenv("QUERY_TIMEOUT_SECONDS")
-
+    MAX_QUERY_ROWS: int = int(os.getenv("MAX_QUERY_ROWS", "100"))
+    QUERY_TIMEOUT_SECONDS: int = int(os.getenv("QUERY_TIMEOUT_SECONDS", "30"))
+    MAX_QUESTION_LENGTH: int = int(os.getenv("MAX_QUESTION_LENGTH", "5000"))
+    
+    @property
+    def QUERY_TIMEOUT(self) -> int:
+        return self.QUERY_TIMEOUT_SECONDS
+    
     class Config:
         env_file = ".env"
-
 
 settings = Settings()

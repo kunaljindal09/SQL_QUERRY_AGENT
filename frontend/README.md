@@ -7,4 +7,4 @@ A full-stack application that converts natural language questions into SQL queri
 - **Frontend**: React 18 + Vite + Tailwind + Recharts
 - **Backend**: FastAPI (Async) + SQLAlchemy 2.0 + Alembic
 - **Database**: MySQL 8.0
-- **AI**: OpenAI/Groq API
+- **AI**: Gemini/Ollama API
