@@ -20,6 +20,9 @@ class LLMService:
         self.model = settings.LLAMA_MODEL
         self.verify_ssl = settings.LLAMA_VERIFY_SSL
         
+        # Gemini model configuration
+        self.gemini_model = settings.GEMINI_MODEL
+        
         # Initialize Google client only if API key is valid
         self.google_client = None
         if settings.GOOGLE_API_KEY and settings.GOOGLE_API_KEY != "your-google-api-key":
@@ -100,11 +103,20 @@ class LLMService:
                 print(f"[LLMService] Google fallback failed: {e}")
 
         # --- BOTH FAILED ---
-        error_msg = "LLM service unavailable. "
-        if primary_error:
-            error_msg += f"Primary: {primary_error[:100]}. "
-        if fallback_error:
-            error_msg += f"Fallback: {fallback_error[:100]}."
+        error_msg = ""
+        
+        # Check if fallback error is quota-related
+        if fallback_error and "quota" in fallback_error.lower():
+            error_msg = "Gemini API quota exceeded (20 free requests/day). Upgrade to paid plan: https://ai.google.dev/pricing"
+        else:
+            error_msg = "LLM service unavailable. "
+            if primary_error:
+                # Truncate to reasonable length but preserve quota messages
+                primary_preview = primary_error[:150] if "quota" not in primary_error.lower() else primary_error[:300]
+                error_msg += f"Primary: {primary_preview}. "
+            if fallback_error:
+                fallback_preview = fallback_error[:150] if "quota" not in fallback_error.lower() else fallback_error[:300]
+                error_msg += f"Fallback: {fallback_preview}."
         
         return {"sql": "", "explanation": "", "error": error_msg}
 
@@ -209,20 +221,49 @@ class LLMService:
         if self.google_client is None:
             raise Exception("Google GenAI fallback is not configured")
 
-        response = self.google_client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=GenerateContentConfig(
-                temperature=0,
-                top_p=0.9
-            )
-        )
+        max_retries = 3
+        base_delay = 1  # Start with 1 second delay
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.google_client.models.generate_content(
+                    model=self.gemini_model,
+                    contents=prompt,
+                    config=GenerateContentConfig(
+                        temperature=0,
+                        top_p=0.9
+                    )
+                )
 
-        raw_text = response.text
-        if not raw_text:
-            raise Exception("Empty response from Google GenAI")
+                raw_text = response.text
+                if not raw_text:
+                    raise Exception("Empty response from Google GenAI")
 
-        return raw_text
+                return raw_text
+            except Exception as e:
+                error_str = str(e)
+                
+                # Check for 429 Quota Exceeded errors (don't retry, fail immediately)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    raise Exception(
+                        "Gemini API quota exceeded. Free tier: 20 requests/day. "
+                        "Please upgrade to a paid plan or try again later. "
+                        "See: https://ai.google.dev/gemini-api/docs/rate-limits"
+                    )
+                
+                # Check for 503 Service Unavailable errors (high demand - retry with backoff)
+                elif "503" in error_str or "UNAVAILABLE" in error_str:
+                    if attempt < max_retries - 1:
+                        # Exponential backoff: 1s, 2s, 4s, etc.
+                        delay = base_delay * (2 ** attempt)
+                        print(f"[LLMService] Gemini temporarily unavailable (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...")
+                        await asyncio.sleep(delay)
+                        continue
+                    else:
+                        raise Exception(f"Gemini service unavailable after {max_retries} retries")
+                else:
+                    # For other errors, fail immediately
+                    raise
 
     # ------------------------------------------------
     # SHARED: PARSE JSON (for SQL generation)

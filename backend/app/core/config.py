@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     
     # germini Settings (alternative)
     GEMINI_API_KEY: str=str(os.getenv("GEMINI_API_KEY"))
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-3.5-turbo"
     
