@@ -22,9 +22,9 @@ class LLMService:
         
         # Initialize Google client only if API key is valid
         self.google_client = None
-        if settings.GOOGLE_API_KEY and settings.GOOGLE_API_KEY != "your-google-api-key":
+        if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your-google-api-key":
             try:
-                self.google_client = Client(api_key=settings.GOOGLE_API_KEY)
+                self.google_client = Client(api_key=settings.GEMINI_API_KEY)
             except Exception as e:
                 print(f"[LLMService] Failed to initialize Google client: {e}")
 
