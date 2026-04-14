@@ -195,12 +195,23 @@ async def ask_question(
             recommendations=analysis_response.get("recommendations", []),
             metadata=analysis_response.get("metadata", None),
         )
+        # Store analysis as dict (SQLAlchemy JSON column handles serialization)
+        analysis_dict = {
+            "summary": analysis_obj.summary,
+            "insights": analysis_obj.insights,
+            "trends": analysis_obj.trends,
+            "anomalies": analysis_obj.anomalies,
+            "recommendations": analysis_obj.recommendations,
+            "metadata": analysis_obj.metadata,
+        }
+        
         history = QueryHistory(
             user_id=current_user.id,
             natural_question=request.question,
             generated_sql=generated_sql,
             execution_result=result,
             explanation=explanation,
+            analysis=analysis_dict,
             error_message=None
         )
         app_db.add(history)
@@ -211,6 +222,7 @@ async def ask_question(
             explanation=explanation,
             result=result_rows,
             columns=exec_result.get("columns", []),
+            analysis=analysis_obj,
             error=None
         )
     finally:

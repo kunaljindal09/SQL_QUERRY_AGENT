@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     LLAMA_MODEL: str = os.getenv("LLAMA_MODEL", "deepseek-coder:6.7b")
     LLAMA_VERIFY_SSL: bool = os.getenv("LLAMA_VERIFY_SSL", "false").lower() in ("true", "1", "yes")
     
-    # germini Settings (alternative)
+    # Groq Fallback LLM Settings (replaces Google Gemini)
+    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+    
+    # Legacy Google settings (deprecated)
     GEMINI_API_KEY: str=str(os.getenv("GEMINI_API_KEY"))
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
@@ -35,6 +39,11 @@ class Settings(BaseSettings):
     MAX_QUERY_ROWS: int = int(os.getenv("MAX_QUERY_ROWS", "100"))
     QUERY_TIMEOUT_SECONDS: int = int(os.getenv("QUERY_TIMEOUT_SECONDS", "30"))
     MAX_QUESTION_LENGTH: int = int(os.getenv("MAX_QUESTION_LENGTH", "5000"))
+    
+    # LLM Timeout Settings (for faster fallback to Groq when Ollama is slow/unavailable)
+    OLLAMA_TIMEOUT_SECONDS: int = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "8"))
+    OLLAMA_CONNECT_TIMEOUT_SECONDS: int = int(os.getenv("OLLAMA_CONNECT_TIMEOUT_SECONDS", "3"))
+    LLM_OPERATION_TIMEOUT_SECONDS: int = int(os.getenv("LLM_OPERATION_TIMEOUT_SECONDS", "12"))
     
     @property
     def QUERY_TIMEOUT(self) -> int:

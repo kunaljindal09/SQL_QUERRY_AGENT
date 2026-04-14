@@ -5,6 +5,8 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import { ToastContainer } from "react-toastify";
 import ERDiagram from './pages/ERDiagram'
+import AnalysisStats from './pages/AnalysisStats'
+import SchemaStatisticsCharts from './pages/SchemaStatisticsCharts'
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import { SchemaProvider } from './context/SchemaContext'
 
@@ -23,6 +25,18 @@ function AppRoutes() {
             path="/er-diagram" 
             element={
               isAuthenticated ? <ERDiagram /> : <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/analysis-stats" 
+            element={
+              isAuthenticated ? <AnalysisStats /> : <Navigate to="/login" />
+            } 
+          />
+          <Route 
+            path="/schema-statistics" 
+            element={
+              isAuthenticated ? <SchemaStatisticsCharts /> : <Navigate to="/login" />
             } 
           />
           <Route 

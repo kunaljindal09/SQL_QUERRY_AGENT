@@ -9,7 +9,7 @@ class QueryHistoryBase(BaseModel):
 
 class QueryHistoryCreate(QueryHistoryBase):
     generated_sql: str
-    execution_result_json: Optional[Any] = None
+    execution_result: Optional[Any] = None
     explanation: str
 
 

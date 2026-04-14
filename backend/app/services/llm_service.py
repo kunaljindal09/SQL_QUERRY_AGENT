@@ -6,8 +6,7 @@ import asyncio
 from typing import Optional, List, Dict, Any
 
 from app.core.config import settings
-from google.genai import Client
-from google.genai.types import GenerateContentConfig
+from groq import Groq
 
 
 REQUIRED_ANALYSIS_KEYS = {"summary", "insights", "anomalies", "trends"}
@@ -20,16 +19,16 @@ class LLMService:
         self.model = settings.LLAMA_MODEL
         self.verify_ssl = settings.LLAMA_VERIFY_SSL
         
-        # Gemini model configuration
-        self.gemini_model = settings.GEMINI_MODEL
+        # Groq model configuration for fallback
+        self.groq_model = settings.GROQ_MODEL
         
-        # Initialize Google client only if API key is valid
-        self.google_client = None
-        if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY != "your-google-api-key":
+        # Initialize Groq client for fallback LLM
+        self.groq_client = None
+        if settings.GROQ_API_KEY and settings.GROQ_API_KEY != "your-groq-api-key":
             try:
-                self.google_client = Client(api_key=settings.GEMINI_API_KEY)
+                self.groq_client = Groq(api_key=settings.GROQ_API_KEY)
             except Exception as e:
-                print(f"[LLMService] Failed to initialize Google client: {e}")
+                print(f"[LLMService] Failed to initialize Groq client: {e}")
 
     # ------------------------------------------------
     # PUBLIC: GENERATE SQL
@@ -40,20 +39,20 @@ class LLMService:
         schema: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Generate SQL with fallback to Google GenAI if primary LLM fails.
+        Generate SQL with fallback to Groq if primary LLM fails.
         Returns: { sql, explanation } or { sql: "", explanation: "", error: "..." }
         """
         try:
-            # Wrap entire operation with 45 second timeout
+            # Wrap entire operation with configurable timeout (default: 12 seconds for faster Groq fallback)
             return await asyncio.wait_for(
                 self._generate_sql_internal(question, schema),
-                timeout=45.0
+                timeout=float(settings.LLM_OPERATION_TIMEOUT_SECONDS)
             )
         except asyncio.TimeoutError:
             return {
                 "sql": "",
                 "explanation": "",
-                "error": "LLM request timed out after 45 seconds. Please try again."
+                "error": f"LLM request timed out after {settings.LLM_OPERATION_TIMEOUT_SECONDS} seconds. Please try again."
             }
     
     async def _generate_sql_internal(
@@ -65,7 +64,7 @@ class LLMService:
         if (
             self.provider == "test"
             and "_call_llm" not in self.__dict__
-            and "_call_google_llm" not in self.__dict__
+            and "_call_groq_llm" not in self.__dict__
         ):
             return {
                 "sql": "SELECT 1",
@@ -90,32 +89,32 @@ class LLMService:
                 primary_error = str(e)
                 print(f"[LLMService] Primary LLM failed: {e}")
 
-        # --- FALLBACK: Google GenAI ---
-        if self.google_client:
+        # --- FALLBACK: Groq LLM ---
+        if self.groq_client:
             try:
-                raw = await self._call_google_llm(prompt)
+                raw = await self._call_groq_llm(prompt)
                 parsed = self._parse_json_response(raw)
                 result = self._extract_sql_result(parsed)
                 if result.get("sql"):
                     return result
             except Exception as e:
                 fallback_error = str(e)
-                print(f"[LLMService] Google fallback failed: {e}")
+                print(f"[LLMService] Groq fallback failed: {e}")
 
         # --- BOTH FAILED ---
         error_msg = ""
         
-        # Check if fallback error is quota-related
-        if fallback_error and "quota" in fallback_error.lower():
-            error_msg = "Gemini API quota exceeded (20 free requests/day). Upgrade to paid plan: https://ai.google.dev/pricing"
+        # Check if fallback error indicates a service issue
+        if fallback_error and ("unavailable" in fallback_error.lower() or "error" in fallback_error.lower()):
+            error_msg = "All LLM services currently unavailable. Please try again later."
         else:
             error_msg = "LLM service unavailable. "
             if primary_error:
-                # Truncate to reasonable length but preserve quota messages
-                primary_preview = primary_error[:150] if "quota" not in primary_error.lower() else primary_error[:300]
+                # Truncate to reasonable length
+                primary_preview = primary_error[:150]
                 error_msg += f"Primary: {primary_preview}. "
             if fallback_error:
-                fallback_preview = fallback_error[:150] if "quota" not in fallback_error.lower() else fallback_error[:300]
+                fallback_preview = fallback_error[:150]
                 error_msg += f"Fallback: {fallback_preview}."
         
         return {"sql": "", "explanation": "", "error": error_msg}
@@ -157,16 +156,16 @@ class LLMService:
         except Exception as e:
             print(f"[LLMService] Primary LLM failed (analyze_query_results): {e}")
 
-        # --- FALLBACK: Google GenAI ---
+        # --- FALLBACK: Groq LLM ---
         try:
-            raw = await self._call_google_llm(prompt)
+            raw = await self._call_groq_llm(prompt)
             parsed = self._safe_parse_json(raw)
             if parsed and REQUIRED_ANALYSIS_KEYS.issubset(parsed.keys()):
                 return parsed
             else:
-                print(f"[LLMService] Google LLM returned incomplete analysis: {raw[:300]}")
+                print(f"[LLMService] Groq LLM returned incomplete analysis: {raw[:300]}")
         except Exception as e:
-            print(f"[LLMService] Google fallback failed (analyze_query_results): {e}")
+            print(f"[LLMService] Groq fallback failed (analyze_query_results): {e}")
 
         # --- BOTH FAILED ---
         return {
@@ -181,7 +180,11 @@ class LLMService:
     # PRIMARY: OLLAMA CALL
     # ------------------------------------------------
     async def _call_llm(self, prompt: str) -> str:
-        timeout = httpx.Timeout(30.0, connect=5.0)  # Reduced timeout: 30s total, 5s connect
+        # Use configurable timeouts: default 8s total, 3s connect (fast fallback to Groq)
+        timeout = httpx.Timeout(
+            float(settings.OLLAMA_TIMEOUT_SECONDS),
+            connect=float(settings.OLLAMA_CONNECT_TIMEOUT_SECONDS)
+        )
         async with httpx.AsyncClient(verify=self.verify_ssl, timeout=timeout) as client:
             payload = {
                 "model": self.model,
@@ -218,55 +221,32 @@ class LLMService:
             return raw_text
 
     # ------------------------------------------------
-    # FALLBACK: GOOGLE GENAI CALL
+    # FALLBACK: GROQ LLM CALL
     # ------------------------------------------------
-    async def _call_google_llm(self, prompt: str) -> str:
-        if self.google_client is None:
-            raise Exception("Google GenAI fallback is not configured")
+    async def _call_groq_llm(self, prompt: str) -> str:
+        if self.groq_client is None:
+            raise Exception("Groq fallback is not configured")
 
-        max_retries = 3
-        base_delay = 1  # Start with 1 second delay
-        
-        for attempt in range(max_retries):
-            try:
-                response = self.google_client.models.generate_content(
-                    model=self.gemini_model,
-                    contents=prompt,
-                    config=GenerateContentConfig(
-                        temperature=0,
-                        top_p=0.9
-                    )
-                )
-
-                raw_text = response.text
-                if not raw_text:
-                    raise Exception("Empty response from Google GenAI")
-
-                return raw_text
-            except Exception as e:
-                error_str = str(e)
-                
-                # Check for 429 Quota Exceeded errors (don't retry, fail immediately)
-                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                    raise Exception(
-                        "Gemini API quota exceeded. Free tier: 20 requests/day. "
-                        "Please upgrade to a paid plan or try again later. "
-                        "See: https://ai.google.dev/gemini-api/docs/rate-limits"
-                    )
-                
-                # Check for 503 Service Unavailable errors (high demand - retry with backoff)
-                elif "503" in error_str or "UNAVAILABLE" in error_str:
-                    if attempt < max_retries - 1:
-                        # Exponential backoff: 1s, 2s, 4s, etc.
-                        delay = base_delay * (2 ** attempt)
-                        print(f"[LLMService] Gemini temporarily unavailable (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...")
-                        await asyncio.sleep(delay)
-                        continue
-                    else:
-                        raise Exception(f"Gemini service unavailable after {max_retries} retries")
-                else:
-                    # For other errors, fail immediately
-                    raise
+        try:
+            # Groq API is synchronous, so we'll call it directly
+            response = self.groq_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=self.groq_model,
+                temperature=0,
+                top_p=0.9,
+            )
+            
+            raw_text = response.choices[0].message.content
+            if not raw_text:
+                raise Exception("Empty response from Groq")
+            
+            return raw_text
+        except Exception as e:
+            error_str = str(e)
+            
+            # Log error for debugging
+            print(f"[LLMService] Groq error: {error_str}")
+            raise
 
     # ------------------------------------------------
     # SHARED: PARSE JSON (for SQL generation)
@@ -340,11 +320,15 @@ RULES:
 4. Explain WHY this query answers the question — mention tables, filters, and joins used.
 5. Do not include conversational behaviour or apologies. Just provide the SQL and explanation.
 6. If names of the columns are same then give them alias name and the names should be meaningful.
+7. If the schema or SQL dialect constraints make it impossible to generate a fully correct query for this request, do not invent a complex invalid query.
+   - Prefer returning an empty SQL string: "sql": "".
+   - If a simpler valid SELECT query can be generated that partially answers the question, return that simpler query.
+   - In either case, the explanation must mention "Fallback Query Error" and describe that this is a fallback response due to schema or dialect limitations.
 
 Respond ONLY with a valid JSON object. No markdown, no extra text:
 {{
-    "sql": "<your SQL query here>",
-    "explanation": "<why this query answers the question>"
+    "sql": "<your SQL query here or empty if no valid query can be generated>",
+    "explanation": "<why this query answers the question or a fallback query error explanation>"
 }}"""
 
     # ------------------------------------------------

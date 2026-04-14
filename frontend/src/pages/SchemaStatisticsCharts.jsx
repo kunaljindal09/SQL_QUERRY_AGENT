@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   BarChart,
   Bar,
@@ -23,9 +24,21 @@ import { toast } from 'react-toastify';
 const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#06b6d4'];
 
 export default function SchemaStatisticsCharts({ connectionString = null, forceRefresh = false }) {
-  const { schema } = useSchema();
+  const { schema, setSchema, isDark } = useSchema();
   const [statistics, setStatistics] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!schema?.tables);
+  const location = useLocation();
+  const fullPage = location.pathname === "/schema-statistics";
+
+  useEffect(() => {
+    if (fullPage && !schema?.tables) {
+      setLoading(true);
+      queryAPI.getSchema()
+        .then(res => setSchema(res.data))
+        .catch(err => console.error("Failed to load schema", err))
+        .finally(() => setLoading(false));
+    }
+  }, [fullPage, schema, setSchema]);
   const [cacheInfo, setCacheInfo] = useState(null);
   const [selectedView, setSelectedView] = useState('overview');
 
@@ -57,33 +70,34 @@ export default function SchemaStatisticsCharts({ connectionString = null, forceR
     fetchStatistics();
   }, [connectionString, forceRefresh, schema]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <p className="mt-2 text-gray-600">Loading statistics...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!statistics) {
-    if (!schema?.tables?.length && !connectionString) {
+  const renderState = () => {
+    if (loading) {
       return (
-        <div className="p-8 bg-yellow-50 rounded-lg text-center text-yellow-800 border border-yellow-200">
-          <p className="font-semibold mb-2"> No Schema Loaded</p>
-          <p className="text-sm">Load a database schema first to view statistics. Click "Database Schema" in the sidebar.</p>
+        <div className="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <p className="mt-2 text-gray-600">Loading statistics...</p>
+          </div>
         </div>
       );
     }
-    
-    return (
-      <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-600">
-        No statistics available
-      </div>
-    );
-  }
+
+    if (!statistics) {
+      if (!schema?.tables?.length && !connectionString) {
+        return (
+          <div className="p-8 bg-yellow-50 rounded-lg text-center text-yellow-800 border border-yellow-200">
+            <p className="font-semibold mb-2"> No Schema Loaded</p>
+            <p className="text-sm">Load a database schema first to view statistics. Click "Database Schema" in the sidebar.</p>
+          </div>
+        );
+      }
+      
+      return (
+        <div className="p-8 bg-gray-50 rounded-lg text-center text-gray-600">
+          No statistics available
+        </div>
+      );
+    }
 
   const tableSizeData = (statistics.table_sizes || []).sort((a, b) => b.row_count - a.row_count);
   const columnTypeData = Object.entries(statistics.column_types || {}).map(([type, count]) => ({
@@ -117,7 +131,7 @@ export default function SchemaStatisticsCharts({ connectionString = null, forceR
     </div>
   );
 
-  return (
+  const content = (
     <div className="space-y-6">
       {renderCacheInfo()}
 
@@ -283,4 +297,56 @@ export default function SchemaStatisticsCharts({ connectionString = null, forceR
       )}
     </div>
   );
+  
+  return content;
+  };
+
+  if (fullPage) {
+    const txt = {
+      primary: isDark ? "#fcfcfc" : "#1e293b",
+      muted: isDark ? "#64748b" : "#64748b",
+    };
+
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: isDark ? "#081115" : "#f0f4ff",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 20,
+          }}
+        >
+          <Link
+            to="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 14,
+              color: txt.muted,
+              textDecoration: "none",
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Dashboard
+          </Link>
+          <h1 style={{ margin: 0, color: txt.primary, fontSize: 24 }}>
+            Schema Statistics
+          </h1>
+        </div>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          {renderState()}
+        </div>
+      </div>
+    );
+  }
+
+  return renderState();
 }

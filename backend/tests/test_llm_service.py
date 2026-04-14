@@ -144,3 +144,13 @@ class TestBuildPrompt:
         assert "SELECT" in result
         assert "INSERT" in result or "DELETE" in result  # Safety rules mention these
         assert "JSON" in result  # Output format instruction
+
+    def test_build_prompt_includes_fallback_query_error_instructions(self, llm):
+        """Prompt should instruct the LLM to return fallback output when a valid query cannot be generated."""
+        # Arrange & Act
+        result = llm._build_prompt("complex grouping question", "any schema")
+
+        # Assert
+        assert "Fallback Query Error" in result
+        assert '"sql": "<your SQL query here or empty if no valid query can be generated>"' in result
+        assert "simpler valid SELECT query" in result
