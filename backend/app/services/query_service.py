@@ -11,7 +11,7 @@ class QueryService:
     DANGEROUS_KEYWORDS = [
         "DROP", "DELETE", "TRUNCATE", "ALTER", "INSERT", "UPDATE", 
         "CREATE", "GRANT", "REVOKE", "EXEC", "EXECUTE", "SHOW", "DESCRIBE",
-        "UNION", "SLEEP", "BENCHMARK", "WAITFOR"
+        "SLEEP", "BENCHMARK", "WAITFOR", "UNION"
     ]
     
     @staticmethod
