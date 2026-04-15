@@ -1,6 +1,6 @@
 """
 LLM Agent Service
-This module handles the integration with Gemini/Ollama API for SQL generation.
+This module handles the integration with Groq/Ollama API for SQL generation.
 """
 from typing import Optional
 from app.core.config import settings
@@ -9,32 +9,30 @@ from app.core.config import settings
 class LLMAgent:
     """
     LLM Agent that converts natural language questions to SQL queries.
-    
-    In production, this integrates with Gemini or Ollama.
+
+    In production, this integrates with Ollama (primary) or Groq (fallback).
     For now, it uses a simple rule-based approach.
     """
-    
+
     def __init__(self, api_key: Optional[str] = None, model: str = None):
-        self.api_key = api_key or settings.GOOGLE_API_KEY
-        self.model = model or settings.LLM_MODEL
-    
+        self.api_key = api_key or settings.GROQ_API_KEY
+        self.model = model or settings.LLAMA_MODEL
+
     def generate_sql(self, question: str, schema: str) -> dict:
         """
         Convert a natural language question to SQL.
-        
+
         Args:
             question: The natural language question
             schema: The database schema description
-            
+
         Returns:
             dict with 'sql' and 'explanation' keys
         """
-        # Placeholder implementation - in production, call Gemini or Ollama API
-        # 
-        # For now, return a placeholder response
+        # Placeholder implementation - in production, call Ollama or Groq API
         return {
-            "sql": "-- LLM integration pending. Configure GOOGLE_API_KEY or Ollama in .env",
-            "explanation": "Configure your Gemini API key or Ollama to enable LLM-based SQL generation."
+            "sql": "-- LLM integration pending. Configure GROQ_API_KEY or Ollama in .env",
+            "explanation": "Configure your Groq API key or Ollama to enable LLM-based SQL generation."
         }
     
     def validate_and_fix_sql(self, sql: str, schema: str) -> dict:

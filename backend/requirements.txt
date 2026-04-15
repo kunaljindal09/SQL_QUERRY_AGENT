@@ -20,8 +20,8 @@ cryptography==46.0.5
 # HTTP Client for Ollama
 httpx==0.28.1
 
-# Google GenAI (Gemini fallback in LLM service)
-google-genai>=1.0.0,<2
+# Groq (fallback LLM service)
+groq==1.1.2
 
 # Settings
 pydantic-settings==2.1.0

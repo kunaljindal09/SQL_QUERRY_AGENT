@@ -54,6 +54,15 @@ class TestAskQuestion:
             "sql": "SELECT * FROM employees",
             "explanation": "Fetches all employees",
         })
+        
+        # Mock LLM analysis response
+        mock_llm_svc.analyze_query_results = AsyncMock(return_value={
+            "summary": "Found 1 employee",
+            "insights": [],
+            "trends": [],
+            "anomalies": [],
+            "recommendations": [],
+        })
 
         # Mock SQL validation
         mock_query_svc.validate_sql.return_value = (True, "")
@@ -106,6 +115,12 @@ class TestAskQuestion:
         mock_llm_svc.generate_sql = AsyncMock(return_value={
             "sql": "SELECT 1",
             "explanation": "Constant",
+        })
+        mock_llm_svc.analyze_query_results = AsyncMock(return_value={
+            "summary": "Result is 1",
+            "insights": [],
+            "trends": [],
+            "anomalies": [],
         })
         mock_query_svc.validate_sql.return_value = (True, "")
         mock_query_svc.execute_query = AsyncMock(return_value={
@@ -204,7 +219,7 @@ class TestAskQuestion:
         mock_llm_svc.generate_sql = AsyncMock(return_value={
             "sql": "",
             "explanation": "",
-            "error": "LLM service unavailable. Primary: Ollama failed. Fallback: Google failed.",
+            "error": "LLM service unavailable. Primary: Ollama failed. Fallback: Groq failed.",
         })
 
         # Act
