@@ -1,8 +1,9 @@
 # Start FastAPI for Playwright E2E (SQLite, no MySQL/Ollama required for auth UI tests).
 # Equivalent to e2e-backend.sh for Windows PowerShell
 
-$ROOT = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-cd "$ROOT\backend"
+$SCRIPT_DIR = if ($PSScriptRoot) { $PSScriptRoot } else { Get-Location }
+$ROOT = Split-Path -Parent $SCRIPT_DIR
+Set-Location "$ROOT\backend"
 
 $env:APP_DATABASE_URL = if ($env:APP_DATABASE_URL) { $env:APP_DATABASE_URL } else { "sqlite+aiosqlite:///./e2e_app.db" }
 $env:DEFAULT_TARGET_DB_URL = if ($env:DEFAULT_TARGET_DB_URL) { $env:DEFAULT_TARGET_DB_URL } else { "sqlite+aiosqlite:///./e2e_target.db" }
