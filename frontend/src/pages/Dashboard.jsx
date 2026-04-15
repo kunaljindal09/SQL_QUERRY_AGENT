@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { queryAPI, historyAPI } from "../services/api";
 import hljs from "highlight.js";
@@ -223,6 +223,22 @@ const Icon = {
       strokeLinecap="round"
     >
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  ),
+  Stats: () => (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
     </svg>
   ),
 };
@@ -490,6 +506,7 @@ function SchemaTree({ schema, loading, isDark }) {
   );
 }
 
+const HISTORY_LIMIT = 10;
 
 function Dashboard() {
   const [question, setQuestion] = useState("");
@@ -505,6 +522,8 @@ function Dashboard() {
   const [response, setResponse] = useState(emptyResponse);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState([]);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
   const [error, setError] = useState("");
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [connectionMode, setConnectionMode] = useState("default");
@@ -551,13 +570,24 @@ function Dashboard() {
   };
 
   
-  const loadHistory = async () => {
+  const loadHistory = async (isLoadMore = false) => {
+    if (isLoadMore) setLoadingMoreHistory(true);
     try {
-      const r = await historyAPI.getHistory({ limit: 50 });
-      setHistory(r.data);
-      console.log(history)
+      const skip = isLoadMore ? history.length : 0;
+      const r = await historyAPI.getHistory({ skip, limit: HISTORY_LIMIT });
+      
+      const newItems = r.data;
+      if (isLoadMore) {
+        setHistory((prev) => [...prev, ...newItems]);
+      } else {
+        setHistory(newItems);
+      }
+      
+      setHasMoreHistory(newItems.length === HISTORY_LIMIT);
     } catch (err) {
       console.error("Failed to load history", err);
+    } finally {
+      if (isLoadMore) setLoadingMoreHistory(false);
     }
   };
   
@@ -613,8 +643,13 @@ function Dashboard() {
   };
   const toggleBookmark = async (id) => {
     try {
-      await historyAPI.toggleBookmark(id);
-      loadHistory();
+      const res = await historyAPI.toggleBookmark(id);
+      // Update local state instead of refetching everything
+      setHistory((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, is_bookmarked: res.data.bookmarked } : item
+        )
+      );
     } catch (err) {
       console.error(err);
     }
@@ -996,6 +1031,79 @@ function Dashboard() {
             </div>
           </div>
 
+          {/* Analysis Stats Link */}
+          <div style={{ padding: "4px 10px 6px" }}>
+            {inRouterContext ? (
+               <Link
+                 to="/schema-statistics"
+                 target="_blank"
+                 style={{
+                   width: "100%",
+                   display: "flex",
+                   alignItems: "center",
+                   gap: 7,
+                   padding: "8px 12px",
+                   borderRadius: 8,
+                   border: `1px solid ${border}`,
+                   background: "transparent",
+                   color: isDark ? "#475569" : "#64748b",
+                   fontSize: 12,
+                   fontWeight: 500,
+                   cursor: "pointer",
+                   transition: "all 0.15s",
+                   textDecoration: "none"
+                 }}
+                 onMouseEnter={(e) => {
+                   e.currentTarget.style.background = isDark
+                     ? "rgba(255,255,255,0.03)"
+                     : "#f8faff";
+                   e.currentTarget.style.color = txt.primary;
+                 }}
+                 onMouseLeave={(e) => {
+                   e.currentTarget.style.background = "transparent";
+                   e.currentTarget.style.color = isDark ? "#475569" : "#64748b";
+                 }}
+               >
+                 <Icon.Stats />
+                 Analysis Stats
+               </Link>
+             ) : (
+               <a
+                 href="/schema-statistics"
+                 target="_blank"
+                 style={{
+                   width: "100%",
+                   display: "flex",
+                   alignItems: "center",
+                   gap: 7,
+                   padding: "8px 12px",
+                   borderRadius: 8,
+                   border: `1px solid ${border}`,
+                   background: "transparent",
+                   color: isDark ? "#475569" : "#64748b",
+                   fontSize: 12,
+                   fontWeight: 500,
+                   cursor: "pointer",
+                   transition: "all 0.15s",
+                   textDecoration: "none"
+                 }}
+                 onMouseEnter={(e) => {
+                   e.currentTarget.style.background = isDark
+                     ? "rgba(255,255,255,0.03)"
+                     : "#f8faff";
+                   e.currentTarget.style.color = txt.primary;
+                 }}
+                 onMouseLeave={(e) => {
+                   e.currentTarget.style.background = "transparent";
+                   e.currentTarget.style.color = isDark ? "#475569" : "#64748b";
+                 }}
+               >
+                 <Icon.Stats />
+                 Analysis Stats
+               </a>
+             )}
+          </div>
+
           {/* Recent label */}
           <p
             style={{
@@ -1099,6 +1207,35 @@ function Dashboard() {
                 </span>
               </div>
             ))}
+            {hasMoreHistory && (
+              <button
+                onClick={() => loadHistory(true)}
+                disabled={loadingMoreHistory}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  background: "transparent",
+                  border: "none",
+                  color: txt.primary,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: loadingMoreHistory ? "default" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                {loadingMoreHistory ? (
+                  <>
+                    <Icon.Spinner />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More"
+                )}
+              </button>
+            )}
           </div>
 
           {}
@@ -1527,7 +1664,6 @@ function Dashboard() {
                             ? `Results (${response.result.length})`
                             : "Results",
                         },
-                        { key: "statistics", label: "Analysis Stats" },
                         { key: "Analysis", label: "Analysis" },
                       ].map((tab) => (
                         <button
@@ -1631,18 +1767,6 @@ function Dashboard() {
                       </div>
                     )}
 
-                    {activeTab === "statistics" && (
-                      <div className="fade-up">
-                        <SchemaStatisticsCharts
-                          connectionString={
-                            connectionMode === "custom"
-                              ? connectionString
-                              : null
-                          }
-                          key={`stats-${connectionMode}-${connectionString}`}
-                        />
-                      </div>
-                    )}
                     {activeTab === "Analysis" && (
                       <div className="fade-up">
                         <Analysis analysis={response.analysis}/>
