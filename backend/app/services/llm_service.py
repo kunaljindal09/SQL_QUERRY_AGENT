@@ -169,7 +169,7 @@ class LLMService:
     # PRIMARY: OLLAMA CALL
     # ------------------------------------------------
     async def _call_llm(self, prompt: str) -> str:
-        timeout = httpx.Timeout(30.0, connect=5.0)  # Reduced timeout: 30s total, 5s connect
+        timeout = httpx.Timeout(120.0, connect=5.0)  # Reduced timeout: 120s total, 5s connect
         async with httpx.AsyncClient(verify=self.verify_ssl, timeout=timeout) as client:
             payload = {
                 "model": self.model,
