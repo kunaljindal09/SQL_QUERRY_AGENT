@@ -476,7 +476,7 @@ function SidebarDashboard(state) {
           {response.error?.trim() ? <ErrorBox error={response.error} isDark={isDark} compact /> : <Table response={response} isDark={isDark} />}
         </div>
       )}
-      {activeTab === "Analysis" && <div className="fade-up"><Analysis analysis={response.analysis} isDark={isDark} /></div>}
+      {activeTab === "Analysis" && <div className="fade-up"><Analysis analysis={response.analysis} question={question} results={response.result} isDark={isDark} /></div>}
     </>
   );
 
@@ -849,7 +849,7 @@ function FullDashboard(state) {
                         {response.error?.trim() ? <ErrorBox error={response.error} isDark={isDark} /> : <Table response={response} isDark={isDark} />}
                       </div>
                     )}
-                    {activeTab === "Analysis" && <div className="fade-up"><Analysis analysis={response.analysis} /></div>}
+                    {activeTab === "Analysis" && <div className="fade-up"><Analysis analysis={response.analysis} question={question} results={response.result} isDark={isDark} /></div>}
                   </div>
                 </div>
               )}
