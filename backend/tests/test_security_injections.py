@@ -51,20 +51,19 @@ class TestSQLInjectionBasic:
         is_valid, error = QueryService.validate_sql(query)
         assert is_valid is False, "Should reject case variations of dangerous keywords"
 
-    @pytest.mark.xfail(reason="UNION keyword filtering is not implemented yet", strict=False)
     def test_union_based_injection_attempt(self):
         """
         Attack: UNION SELECT
         Allows extracting data from other tables.
         
-        NOTE: If UNION is not in DANGEROUS_KEYWORDS, this test will fail.
-        Consider adding UNION to the blocked list.
+        UNION is blocked as a security measure to prevent data exfiltration attacks.
         """
         query = "SELECT id FROM users UNION SELECT password FROM admin"
         is_valid, error = QueryService.validate_sql(query)
-        # Your call: UNION might be syntactically OK but semantically dangerous
-        # Recommend marking as dangerous for safety-first approach
+        
+        # UNION should be blocked for security
         assert is_valid is False, "UNION-based injection should be blocked"
+        assert "UNION" in error, f"Error should mention UNION keyword, got: {error}"
 
 
 class TestSQLInjectionAdvanced:
@@ -74,6 +73,8 @@ class TestSQLInjectionAdvanced:
         """
         Attack: Nested SELECT with dangerous keywords
         Tests subquery injection vectors.
+        
+        UNION is blocked even in nested subqueries for security.
         """
         query = """
         SELECT * FROM (
@@ -82,7 +83,10 @@ class TestSQLInjectionAdvanced:
         ) AS t
         """
         is_valid, error = QueryService.validate_sql(query)
-        assert is_valid is False or "UNION" in error
+        
+        # UNION should be blocked even in nested queries
+        assert is_valid is False, "Nested UNION queries should be blocked"
+        assert "UNION" in error, f"Error should mention UNION keyword, got: {error}"
 
     def test_comment_suppression_variant(self):
         """
@@ -141,15 +145,19 @@ class TestSQLInjectionAdvanced:
                 "blind SQL injection. Add 'SLEEP' to DANGEROUS_KEYWORDS immediately."
             )
 
-    @pytest.mark.xfail(reason="BENCHMARK keyword filtering is not implemented yet", strict=False)
     def test_benchmark_function_timing_attack(self):
         """
         Similar to SLEEP, BENCHMARK can be exploited for timing attacks.
         SELECT * FROM users WHERE BENCHMARK(10000000, MD5('test')) = 0
+        
+        GOOD NEWS: BENCHMARK is already in DANGEROUS_KEYWORDS and is blocked!
         """
         query = "SELECT * FROM users WHERE BENCHMARK(1000000, MD5('x')) = 0"
         is_valid, error = QueryService.validate_sql(query)
+        
+        # BENCHMARK should be blocked (it's in DANGEROUS_KEYWORDS)
         assert is_valid is False, "BENCHMARK timing attack should be blocked"
+        assert "BENCHMARK" in error, f"Error should mention BENCHMARK, got: {error}"
 
     def test_cartesian_product_dos_attack(self):
         """

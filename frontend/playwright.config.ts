@@ -22,7 +22,7 @@ export default defineConfig({
   webServer: [
     {
       command: process.platform === "win32" 
-        ? "powershell ../scripts/e2e-backend.ps1"
+        ? "powershell -ExecutionPolicy Bypass -File ../scripts/e2e-backend.ps1"
         : "bash ../scripts/e2e-backend.sh",
       url: "http://127.0.0.1:8000/health",
       timeout: 120_000,

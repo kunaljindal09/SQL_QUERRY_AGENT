@@ -48,6 +48,14 @@ class TestBasicSQLGeneration:
             "explanation": "Retrieves all employee records"
         })
         
+        # Mock analysis response
+        mock_llm.analyze_query_results = AsyncMock(return_value={
+            "summary": "Found 2 employees",
+            "insights": [],
+            "trends": [],
+            "anomalies": [],
+        })
+        
         mock_query_svc.validate_sql.return_value = (True, "")
         mock_query_svc.execute_query = AsyncMock(return_value={
             "success": True,
