@@ -7,6 +7,8 @@ import SchemaVisualization from "./SchemaVisualization";
 import Analysis from "./Analysis";
 import { Link, useInRouterContext } from "react-router-dom";
 import { useSchema } from "../context/SchemaContext";
+import AppLogo from "../components/AppLogo";
+import { showAuthSuccessToast } from "../components/AuthToast";
 
 // ─── Detect Google Sheets sidebar: running in an iframe with narrow viewport ───
 function useIsSidebar() {
@@ -406,10 +408,31 @@ function useDashboardState() {
     } finally { setLoading(false); }
   };
 
-  const handleConnectionChange = (mode) => { setConnectionMode(mode); fetchSchema(mode === "custom" ? connectionString : null); };
-  const handleConnectionStringBlur = () => { if (connectionMode === "custom" && connectionString.trim()) fetchSchema(connectionString); };
-  const handleLogout = () => { localStorage.removeItem("token"); toast.success("Logged out successfully"); setTimeout(() => { window.location.href = "/login"; }, 1000); };
-
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+  const handleConnectionChange = (mode) => {
+    setConnectionMode(mode);
+    fetchSchema(mode === "custom" ? connectionString : null);
+  };
+  const handleConnectionStringBlur = () => {
+    if (connectionMode === "custom" && connectionString.trim())
+      fetchSchema(connectionString);
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    showAuthSuccessToast({
+      title: "Logged out",
+      message: "Your session ended securely.",
+      options: { autoClose: 2200 },
+    });
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1000);
+  };
   const toggleBookmark = async (id) => {
     try {
       const res = await historyAPI.toggleBookmark(id);
@@ -684,16 +707,69 @@ function FullDashboard(state) {
       <GlobalStyles isDark={isDark} compact={false} />
       <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: bg.app, color: txt.primary, fontFamily: "'Figtree',sans-serif" }}>
         <div data-testid="schema-vis" style={{ display: "none" }} />
-
-        {/* ── Sidebar ── */}
-        <aside style={{ width: sidebarOpen ? 272 : 0, minWidth: sidebarOpen ? 272 : 0, display: "flex", flexDirection: "column", flexShrink: 0, overflow: "hidden", transition: "width 0.3s ease, min-width 0.3s ease", background: bg.sidebar, borderRight: `1px solid ${border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 16px", borderBottom: `1px solid ${border}`, flexShrink: 0 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#2563eb,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+        {}
+        <aside
+          style={{
+            width: sidebarOpen ? 272 : 0,
+            minWidth: sidebarOpen ? 272 : 0,
+            display: "flex",
+            flexDirection: "column",
+            flexShrink: 0,
+            overflow: "hidden",
+            transition: "width 0.3s ease, min-width 0.3s ease",
+            background: bg.sidebar,
+            borderRight: `1px solid ${border}`,
+          }}
+        >
+          {/* Logo */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "18px 16px",
+              borderBottom: `1px solid ${border}`,
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: isDark ? "#0a1020" : "#f8fafc",
+                border: `1px solid ${border}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                padding: 4,
+              }}
+            >
+              <AppLogo size={28} alt="SQL Query Agent" />
             </div>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: txt.primary, margin: 0, whiteSpace: "nowrap" }}>SQL Agent</p>
-              <p style={{ fontSize: 10, color: txt.faint, margin: 0, whiteSpace: "nowrap" }}>Query Interface</p>
+              <p
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: txt.primary,
+                  margin: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                SQL Query Agent
+              </p>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: txt.faint,
+                  margin: 0,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Query Interface
+              </p>
             </div>
           </div>
 

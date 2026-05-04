@@ -169,6 +169,12 @@ class TestDatabaseFailureModes:
             "sql": "SELECT * FROM employees",
             "explanation": "OK",
         })
+        mock_llm.analyze_query_results = AsyncMock(return_value={
+            "summary": "Query executed",
+            "insights": [],
+            "trends": [],
+            "anomalies": [],
+        })
         mock_query_svc.validate_sql.return_value = (True, "")
         mock_query_svc.execute_query = AsyncMock(
             side_effect=DatabaseError("Access denied", None, None)
@@ -212,6 +218,12 @@ class TestEmptyResultHandling:
         mock_llm.generate_sql = AsyncMock(return_value={
             "sql": "SELECT * FROM employees WHERE id = 99999",
             "explanation": "Search for non-existent employee"
+        })
+        mock_llm.analyze_query_results = AsyncMock(return_value={
+            "summary": "No results found",
+            "insights": [],
+            "trends": [],
+            "anomalies": [],
         })
         mock_query_svc.validate_sql.return_value = (True, "")
         mock_query_svc.execute_query = AsyncMock(return_value={

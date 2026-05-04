@@ -2,7 +2,6 @@ import asyncio
 import httpx
 import json
 import re
-import asyncio
 from typing import Optional, List, Dict, Any
 
 from app.core.config import settings
@@ -75,7 +74,7 @@ class LLMService:
         prompt = self._build_prompt(question, schema_text)
 
         primary_error = None
-        fallback_error = None
+        fallback_errors: List[str] = []
 
         # --- PRIMARY: Ollama/Llama ---
         if self.provider == "llama" and self.base_url:
@@ -84,6 +83,8 @@ class LLMService:
                 parsed = self._parse_json_response(raw)
                 result = self._extract_sql_result(parsed)
                 if result.get("sql"):
+                    result["provider"] = f"ollama ({self.model})"
+                    print(f"[LLMService] Response from Ollama ({self.model})")
                     return result
             except Exception as e:
                 primary_error = str(e)
@@ -150,6 +151,7 @@ class LLMService:
             raw = await self._call_llm(prompt)
             parsed = self._safe_parse_json(raw)
             if parsed and REQUIRED_ANALYSIS_KEYS.issubset(parsed.keys()):
+                print(f"[LLMService] Analysis from Ollama ({self.model})")
                 return parsed
             else:
                 print(f"[LLMService] Primary LLM returned incomplete analysis: {raw[:300]}")
@@ -161,6 +163,7 @@ class LLMService:
             raw = await self._call_groq_llm(prompt)
             parsed = self._safe_parse_json(raw)
             if parsed and REQUIRED_ANALYSIS_KEYS.issubset(parsed.keys()):
+                print(f"[LLMService] Analysis from Groq ({self.groq_model})")
                 return parsed
             else:
                 print(f"[LLMService] Groq LLM returned incomplete analysis: {raw[:300]}")
@@ -399,9 +402,7 @@ All fields are required. Arrays must contain at least one string if findings exi
 
         # Serialize ONLY the actual records as a clean JSON array
         # default=str safely handles datetime, Decimal, UUID, etc.
-        
         data_json = json.dumps(trimmed, indent=2, default=str)
-        
         meta = {
             "total_rows": len(results),
             "rows_analyzed": len(trimmed),

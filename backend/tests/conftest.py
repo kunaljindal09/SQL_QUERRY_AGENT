@@ -51,14 +51,13 @@ os.environ["LLM_PROVIDER"] = "test"
 os.environ["LLAMA_BASE_URL"] = "http://127.0.0.1:11434"
 os.environ["LLAMA_MODEL"] = "deepseek-coder:6.7b"
 os.environ["LLAMA_VERIFY_SSL"] = "false"
-os.environ["GOOGLE_API_KEY"] = "fake-google-key"
+os.environ["GROQ_API_KEY"] = "fake-groq-key"
 os.environ["MAX_QUERY_ROWS"] = "100"
 os.environ["QUERY_TIMEOUT_SECONDS"] = "30"
 os.environ["MAX_QUESTION_LENGTH"] = "5000"
 
-# Mute google.genai imports so we don't need a real key
-sys.modules["google.genai"] = MagicMock()
-sys.modules["google.genai.types"] = MagicMock()
+# Mute groq imports so we don't need a real key
+sys.modules["groq"] = MagicMock()
 
 # ---------------------------------------------------------------------------
 # Import the app module now that env vars are set

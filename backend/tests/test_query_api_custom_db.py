@@ -46,6 +46,12 @@ class TestQueryApiCustomDB:
             "sql": "SELECT 1",
             "explanation": "OK",
         })
+        mock_llm_svc.analyze_query_results = AsyncMock(return_value={
+            "summary": "Result is 1",
+            "insights": [],
+            "trends": [],
+            "anomalies": [],
+        })
         mock_query_svc.validate_sql.return_value = (True, "")
         mock_query_svc.execute_query = AsyncMock(return_value={
             "success": True,
